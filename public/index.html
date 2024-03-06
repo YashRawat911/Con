@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Terminal</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      margin: 20px;
+      background-color: #282c34;
+      color: #abb2bf;
+    }
+    #terminal {
+      width: 99%;
+      height: 550px;
+      border: 0.1px solid #abb2bf;
+      padding: 10px;
+      overflow-y: scroll;
+      background-color: #1e1e1e;
+      scrollbar-width: thin; /* Firefox */
+      scrollbar-color: #abb2bf #1e1e1e; /* Firefox */
+    }
+
+    #terminal::-webkit-scrollbar {
+      width: 6px; /* WebKit */
+    }
+
+    #terminal::-webkit-scrollbar-thumb {
+      background-color: #abb2bf; /* WebKit */
+    }
+
+    #commandInput {
+      width: calc(100% - 27px);
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      background-color: #1e1e1e;
+      color: #abb2bf;
+    }
+
+    #commandInput:focus {
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Web Terminal</h1>
+  <div id="terminal"></div>
+  <input type="text" id="commandInput" placeholder="Enter a command">
+  <!-- Your existing HTML code -->
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const terminal = document.getElementById('terminal');
+      const commandInput = document.getElementById('commandInput');
+      const sessionID = getSessionID();
+
+      // Update the title with the sessionID
+      document.querySelector('h1').textContent = `Web Terminal - ${sessionID}`;
+
+      commandInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          executeCommand();
+        }
+      });
+
+      function executeCommand() {
+        const command = commandInput.value;
+        if (command.trim() === '') {
+          return;
+        }
+
+        const timestamp = new Date().toLocaleTimeString();
+        appendToTerminal(`<span class="timestamp">${timestamp}</span> <span class="prompt">$</span> ${command}`);
+
+        fetch(`/execute?command=${encodeURIComponent(command)}`)
+          .then(response => response.text())
+          .then(result => {
+            formatAndAppendToTerminal(result);
+            commandInput.value = '';
+            scrollToBottom();
+          })
+          .catch(error => {
+            appendToTerminal(`<span class="error">Error:</span> ${error.message}`);
+            scrollToBottom();
+          });
+      }
+
+      function formatAndAppendToTerminal(text) {
+        // Split the text into lines
+        const lines = text.split('\n');
+
+        // Format and append each line to the terminal
+        lines.forEach(line => {
+          const formattedLine = formatLine(line);
+          appendToTerminal(formattedLine);
+        });
+      }
+
+      function formatLine(line) {
+        // Replace /home/runner/FreshHarshPaint/user_folders/ with /lykcloud/kvm/
+        const transformedLine = line.replace(
+          /\/home\/runner\/FreshHarshPaint\/user_folders\//g,
+          '/lykcloud/kvm/'
+        );
+
+        // Add extra indentation to each line
+        return `<span class="output" style="color: #00ff00;">  ${transformedLine}</span>`;
+      }
+
+      function appendToTerminal(html) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        terminal.appendChild(div);
+      }
+
+      function scrollToBottom() {
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      function getSessionID() {
+        const cookies = document.cookie.split(';');
+        for (const cookie of cookies) {
+          const [name, value] = cookie.split('=');
+          if (name.trim() === 'connect.sid') {
+            return value.trim();
+          }
+        }
+        return 'LykCloud';
+      }
+    });
+  </script>
+
+  <!-- Your existing HTML code continues... -->
+
+</body>
+</html>
